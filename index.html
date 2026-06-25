@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>熱門影劇播放量動態觀測站</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght=400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #6366f1; 
+            --secondary-color: #a855f7; 
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-light: #f8fafc;
+            --text-gray: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            line-height: 1.5;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 20px 15px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+
+        header h1 {
+            font-size: 1.4rem;
+            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+        }
+
+        header p {
+            color: #e2e8f0;
+            font-size: 0.8rem;
+            opacity: 0.9;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        /* 控制面板 */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #334155;
+            text-align: center;
+            align-items: center;
+        }
+
+        .update-time {
+            font-size: 0.85rem;
+            color: var(--text-gray);
+        }
+
+        .btn-refresh {
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            width: 100%;
+            max-width: 280px;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        /* 頁籤樣式 */
+        .tabs-header {
+            display: flex;
+            background: #1e293b;
+            border-radius: 12px 12px 0 0;
+            padding: 10px 10px 0 10px;
+            border-bottom: 2px solid #334155;
+            gap: 5px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .tabs-header::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 16px;
+            font-size: 0.95rem;
+            font-weight: bold;
+            color: var(--text-gray);
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        /* 展示面板 */
+        .tab-panel {
+            background: var(--card-bg);
+            border-radius: 0 0 12px 12px;
+            padding: 15px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.3);
+            border: 1px solid #334155;
+            border-top: none;
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: #f8fafc;
+            margin: 15px 0 12px 0;
+            padding-left: 8px;
+            border-left: 4px solid var(--secondary-color);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* 響應式表格：預設在手機上變成卡片群組 */
+        .drama-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+        }
+
+        .drama-table thead {
+            display: none;
+        }
+
+        .drama-table tr {
+            display: block;
+            background: #111827;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 12px;
+            position: relative;
+        }
+
+        .drama-table td {
+            display: block;
+            padding: 4px 0;
+            text-align: left;
+            border: none;
+        }
+
+        .drama-table td:nth-child(1) {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+        }
+
+        .drama-link {
+            color: #67e8f9;
+            text-decoration: none;
+            font-size: 1.05rem;
+            font-weight: bold;
+            display: inline-block;
+            max-width: 85%;
+            word-break: break-all;
+        }
+
+        .cast-info {
+            font-size: 0.85rem;
+            color: #94a3b8;
+            margin-top: 6px;
+            line-height: 1.4;
+        }
+
+        .cast-info i {
+            color: #a855f7;
+        }
+
+        /* 日期與數據資訊列 */
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 10px;
+            padding-top: 8px;
+            border-top: 1px dashed #334155;
+            font-size: 0.85rem;
+        }
+
+        .date-text {
+            color: #94a3b8;
+        }
+
+        .heat-text {
+            font-weight: bold;
+        }
+
+        /* 徽章樣式 */
+        .rank-badge {
+            display: inline-block;
+            width: 24px;
+            height: 24px;
+            background-color: #475569;
+            color: white;
+            text-align: center;
+            border-radius: 50%;
+            font-weight: bold;
+            font-size: 0.8rem;
+            line-height: 24px;
+        }
+
+        .drama-table tr:nth-child(1) .rank-badge { background-color: #f59e0b; color: #000; }
+        .drama-table tr:nth-child(2) .rank-badge { background-color: #94a3b8; color: #000; }
+        .drama-table tr:nth-child(3) .rank-badge { background-color: #b45309; color: white; }
+
+        .new-drama-badge {
+            background-color: #1e3a8a;
+            color: #93c5fd;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .loading-shimmer {
+            animation: opacityPulse 1s infinite ease-in-out;
+            opacity: 0.5;
+        }
+
+        @keyframes opacityPulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.9; }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .btn-refresh i.spinning { animation: spin 1s linear infinite; }
+
+        @media (min-width: 768px) {
+            header { padding: 30px 20px; }
+            header h1 { font-size: 2rem; }
+            header p { font-size: 0.95rem; }
+            .container { padding: 0 20px; margin-top: 30px; }
+            .control-panel { flex-direction: row; justify-content: space-between; text-align: left; }
+            .btn-refresh { width: auto; }
+            .tab-panel { padding: 25px; }
+            .section-title { font-size: 1.25rem; }
+            
+            .drama-table thead { display: table-header-group; }
+            .drama-table tr { display: table-row; background: transparent; border: none; }
+            .drama-table tr:hover { background-color: #243249; }
+            .drama-table th, .drama-table td { display: table-cell; padding: 14px 12px; border-bottom: 1px solid #334155; position: static; }
+            .drama-table th { background-color: #111827; font-weight: bold; color: var(--text-gray); }
+            .drama-table td:nth-child(1) { position: static; }
+            .meta-row { display: contents; }
+            .date-text { font-size: 0.9rem; color: #cbd5e1; }
+            .drama-link { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1><i class="fas fa-video"></i> 全球熱門影劇觀測站</h1>
+        <p>隨時追蹤最新劇集卡司與累積播放熱度數據（點擊劇名看精準預告）</p>
+    </header>
+
+    <div class="container">
+        
+        <div class="control-panel">
+            <div class="update-time">
+                <i class="far fa-clock"></i> 數據最後更新：<span id="sync-time">載入中...</span>
+            </div>
+            <button class="btn-refresh" id="refresh-btn">
+                <i class="fas fa-sync-alt" id="refresh-icon"></i> 刷新熱度數據
+            </button>
+        </div>
+
+        <div class="tabs-header">
+            <button class="tab-btn active" onclick="changeTab(event, 'panel-recent')">
+                <i class="fas fa-bolt" style="color: #a855f7;"></i> 近期熱播 🔥
+            </button>
+            <button class="tab-btn" onclick="changeTab(event, 'panel-tw')">
+                <i class="fas fa-film" style="color: #38bdf8;"></i> 台灣劇集
+            </button>
+            <button class="tab-btn" onclick="changeTab(event, 'panel-cn')">
+                <i class="fas fa-fire" style="color: #f87171;"></i> 大陸劇集
+            </button>
+            <button class="tab-btn" onclick="changeTab(event, 'panel-kr')">
+                <i class="fas fa-star" style="color: #fbbf24;"></i> 韓國劇集
+            </button>
+        </div>
+
+        <div id="data-container">
+            <!-- 近期熱播 -->
+            <div id="panel-recent" class="tab-panel active">
+                <div class="section-title"><i class="fas fa-fire-alt" style="color:#a855f7;"></i> 全網焦點話題新片榜 (Top 20)</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">排行</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">累計播放熱度</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-drama-list"></tbody>
+                </table>
+            </div>
+
+            <!-- 台劇 -->
+            <div id="panel-tw" class="tab-panel">
+                <div class="section-title"><i class="fas fa-bullhorn" style="color:#38bdf8;"></i> 本月新上線台劇速報</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">標籤</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">當月預估播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tw-new-list"></tbody>
+                </table>
+
+                <div class="section-title"><i class="fas fa-bolt" style="color:#f97316;"></i> 2026 年度台劇熱播榜</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">排行</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">2026年累計播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tw-2026-list"></tbody>
+                </table>
+                
+                <div class="section-title"><i class="fas fa-trophy" style="color:#94a3b8;"></i> 台灣劇集歷年總排行榜</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">排行</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">近一年累計播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tw-drama-list"></tbody>
+                </table>
+            </div>
+
+            <!-- 陸劇 -->
+            <div id="panel-cn" class="tab-panel">
+                <div class="section-title"><i class="fas fa-bullhorn" style="color:#f87171;"></i> 本月新上線陸劇速報</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">標籤</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">當月預估播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cn-new-list"></tbody>
+                </table>
+
+                <div class="section-title"><i class="fas fa-bolt" style="color:#f97316;"></i> 2026 年度陸劇熱播榜</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">排行</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">2026年累計播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cn-2026-list"></tbody>
+                </table>
+
+                <div class="section-title"><i class="fas fa-trophy" style="color:#94a3b8;"></i> 大陸劇集歷年總排行榜</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">排行</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">近一年累計播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="cn-drama-list"></tbody>
+                </table>
+            </div>
+
+            <!-- 韓劇 -->
+            <div id="panel-kr" class="tab-panel">
+                <div class="section-title"><i class="fas fa-bullhorn" style="color:#fbbf24;"></i> 本月新上線韓劇速報</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">標籤</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">當月預估播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kr-new-list"></tbody>
+                </table>
+
+                <div class="section-title"><i class="fas fa-bolt" style="color:#f97316;"></i> 2026 年度韓劇熱播榜</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">排行</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">2026年累計播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kr-2026-list"></tbody>
+                </table>
+
+                <div class="section-title"><i class="fas fa-trophy" style="color:#94a3b8;"></i> 韓國劇集歷年總排行榜</div>
+                <table class="drama-table">
+                    <thead>
+                        <tr>
+                            <th width="10%">排行</th>
+                            <th width="50%">劇集名稱 / 主要演員</th>
+                            <th width="20%">開播日期</th>
+                            <th width="20%">近一年累計播放量</th>
+                        </tr>
+                    </thead>
+                    <tbody id="kr-drama-list"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2026 影劇數據觀測小組 • 精準預告連結優化版</p>
+    </footer>
+
+    <script>
+        // 核心影劇資料庫 - 預告URL已優化為包含地區、劇名、主角卡司的精準YouTube搜尋
+        const mockDatabase = {
+            recentDrama: [
+                { name: "全知讀者視角 (韓)", cast: "李敏鎬、安孝燮、蔡秀彬", date: "2026-05-12", yearly: "1.4 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+全知讀者視角+李敏鎬+安孝燮+官方預告" },
+                { name: "我們與惡的距離 第二季 (台)", cast: "周渝民、薛仕凌、謝欣穎", date: "2026-04-05", yearly: "9,500 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+我們與惡的距離2+周渝民+薛仕凌+預告" },
+                { name: "長風破浪 (陸)", cast: "王一博、李沁、王陽", date: "2026-05-01", yearly: "9,200 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+長風破浪+王一博+李沁+預告" },
+                { name: "魷魚遊戲 第二季 (韓)", cast: "李政宰、李秉憲、孔劉", date: "2025-12-26", yearly: "8.8 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+魷魚遊戲2+李政宰+官方預告" },
+                { name: "深淵對決 (陸)", cast: "張若昀、鍾楚曦", date: "2026-06-10", yearly: "6,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+深淵對決+張若昀+鍾楚曦+預告" },
+                { name: "神之天秤 (韓)", cast: "金秀賢、金智媛", date: "2026-06-01", yearly: "5,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+神之天秤+金秀賢+金智媛+預告" },
+                { name: "春風引 (陸)", cast: "肖戰、趙露思", date: "2026-01-20", yearly: "5,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+春風引+肖戰+趙露思+預告" },
+                { name: "天亮說再見 (陸)", cast: "陳星旭、章若楠", date: "2026-03-15", yearly: "4,900 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+天亮說再見+陳星旭+章若楠+預告" },
+                { name: "長夜之光 (陸)", cast: "白宇、倪妮", date: "2026-04-18", yearly: "4,100 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+長夜之光+白宇+倪妮+預告" },
+                { name: "明日預告 (韓)", cast: "車銀優、韓韶禧", date: "2026-02-28", yearly: "2,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+明日預告+車銀優+韓韶禧+預告" },
+                { name: "黑色信號 (韓)", cast: "李帝勳、具教煥", date: "2026-04-02", yearly: "2,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+黑色信號+李帝勳+具教煥+預告" },
+                { name: "首爾極夜 (韓)", cast: "朴敘俊、韓孝周", date: "2026-01-15", yearly: "1,950 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+首爾極夜+朴敘俊+韓孝周+預告" },
+                { name: "時光的灰燼 (台)", cast: "許光漢、袁艾菲", date: "2026-05-20", yearly: "1,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+時光的灰燼+許光漢+預告" },
+                { name: "昨日之約 (台)", cast: "劉冠廷、王淨、林柏宏", date: "2026-06-15", yearly: "1,650 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+昨日之約+劉冠廷+王淨+預告" },
+                { name: "破浪之時 (台)", cast: "吳慷仁、柯佳嬿", date: "2026-02-14", yearly: "1,420 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+破浪之時+吳慷仁+柯佳嬿+預告" },
+                { name: "幻鏡城 (陸)", cast: "任嘉倫、白鹿", date: "2026-05-28", yearly: "1,350 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+幻鏡城+任嘉倫+白鹿+預告" },
+                { name: "綠洲咖啡館 (台)", cast: "曾敬驊、項婕如", date: "2026-03-22", yearly: "1,240 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+綠洲咖啡館+曾敬驊+預告" },
+                { name: "藍色迴廊 (韓)", cast: "玄彬、孫藝真", date: "2026-05-05", yearly: "1,120 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+藍色迴廊+玄彬+孫藝真+預告" },
+                { name: "黎明前的倒數 (台)", cast: "陳昊森、李沐", date: "2026-04-12", yearly: "980 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+黎明前的倒數+陳昊森+李沐+預告" },
+                { name: "記憶的邊緣 (台)", cast: "張孝全、賈靜雯", date: "2026-01-10", yearly: "850 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+記憶的邊緣+張孝全+賈靜雯+預告" }
+            ],
+            twHot2026: [
+                { name: "我們與惡的距離 第二季", cast: "周渝民、薛仕凌、謝欣穎、于子育", date: "2026-04-05", yearly: "9,500 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+我們與惡的距離2+周渝民+薛仕凌+預告" },
+                { name: "時光的灰燼", cast: "許光漢、袁艾菲", date: "2026-05-20", yearly: "1,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+時光的灰燼+許光漢+預告" },
+                { name: "昨日之約", cast: "劉冠廷、王淨、林柏宏", date: "2026-06-15", yearly: "1,650 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+昨日之約+劉冠廷+王淨+預告" },
+                { name: "破浪之時", cast: "吳慷仁、柯佳嬿", date: "2026-02-14", yearly: "1,420 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+破浪之時+吳慷仁+柯佳嬿+預告" },
+                { name: "綠洲咖啡館", cast: "曾敬驊、項婕如", date: "2026-03-22", yearly: "1,240 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+綠洲咖啡館+曾敬驊+預告" },
+                { name: "黎明前的倒數", cast: "陳昊森、李沐", date: "2026-04-12", yearly: "980 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+黎明前的倒數+陳昊森+李沐+預告" },
+                { name: "記憶的邊緣", cast: "張孝全、賈靜雯", date: "2026-01-10", yearly: "850 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+記憶的邊緣+張孝全+賈靜雯+預告" },
+                { name: "風中的承諾", cast: "朱軒洋、蔡淑臻", date: "2026-03-05", yearly: "710 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+風中的承諾+朱軒洋+蔡淑臻+預告" },
+                { name: "重播人生", cast: "傅孟柏、邵雨薇", date: "2026-05-02", yearly: "630 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+重播人生+傅孟柏+邵雨薇+預告" },
+                { name: "霓虹夜行", cast: "范少勳、郭雪芙", date: "2026-06-20", yearly: "520 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+霓虹夜行+范少勳+郭雪芙+預告" }
+            ],
+            cnHot2026: [
+                { name: "長風破浪", cast: "王一博、李沁、王陽", date: "2026-05-01", yearly: "9,200 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+長風破浪+王一博+李沁+預告" },
+                { name: "深淵對決", cast: "張若昀、鍾楚曦", date: "2026-06-10", yearly: "6,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+深淵對決+張若昀+鍾楚曦+預告" },
+                { name: "春風引", cast: "肖戰、趙露思", date: "2026-01-20", yearly: "5,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+春風引+肖戰+趙露思+預告" },
+                { name: "天亮說再見", cast: "陳星旭、章若楠", date: "2026-03-15", yearly: "4,900 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+天亮說再見+陳星旭+章若楠+預告" },
+                { name: "長夜之光", cast: "白宇、倪妮", date: "2026-04-18", yearly: "4,100 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+長夜之光+白宇+倪妮+預告" },
+                { name: "幻鏡城", cast: "任嘉倫、白鹿", date: "2026-05-28", yearly: "3,350 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+幻鏡城+任嘉倫+白鹿+預告" },
+                { name: "大漠孤煙", cast: "吳磊、迪麗熱巴", date: "2026-02-10", yearly: "2,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+大漠孤煙+吳磊+迪麗熱巴+預告" },
+                { name: "金陵往事", cast: "成毅、李一桐", date: "2026-04-01", yearly: "2,450 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+金陵往事+成毅+李一桐+預告" },
+                { name: "星河長明", cast: "許凱、虞書欣", date: "2026-01-05", yearly: "1,900 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+星河長明+許凱+虞書欣+預告" },
+                { name: "雲端之下", cast: "檀健次、周也", date: "2026-06-12", yearly: "1,600 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+雲端之下+檀健次+周也+預告" }
+            ],
+            krHot2026: [
+                { name: "全知讀者視角", cast: "李敏鎬、安孝燮、蔡秀彬", date: "2026-05-12", yearly: "1.4 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+全知讀者視角+李敏鎬+安孝燮+預告" },
+                { name: "神之天秤", cast: "金秀賢、金智媛", date: "2026-06-01", yearly: "5,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+神之天秤+金秀賢+金智媛+預告" },
+                { name: "明日預告", cast: "車銀優、韓韶禧", date: "2026-02-28", yearly: "2,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+明日預告+車銀優+韓韶禧+預告" },
+                { name: "黑色信號", cast: "李帝勳、具教煥", date: "2026-04-02", yearly: "2,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+黑色信號+李帝勳+具教煥+預告" },
+                { name: "首爾極夜", cast: "朴敘俊、韓孝周", date: "2026-01-15", yearly: "1,950 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+首爾極夜+朴敘俊+韓孝周+預告" },
+                { name: "藍色迴廊", cast: "玄彬、孫藝真", date: "2026-05-05", yearly: "1,620 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+藍色迴廊+玄彬+孫藝真+預告" },
+                { name: "機智的校園生活", cast: "高允貞、申詩雅", date: "2026-03-18", yearly: "1,450 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+機智的校園生活+高允貞+預告" },
+                { name: "影子獵人", cast: "李到晛、林智妍", date: "2026-02-11", yearly: "1,200 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+影子獵人+李到晛+林智妍+預告" },
+                { name: "冰點之下的你", cast: "宋江、金裕貞", date: "2026-04-25", yearly: "1,050 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+冰點之下的你+宋江+金裕貞+預告" },
+                { name: "第七次告白", cast: "邊佑錫、金惠奫", date: "2026-06-05", yearly: "920 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+第七次告白+邊佑錫+金惠奫+預告" }
+            ],
+            twDrama: [
+                { name: "不夠善良的我們", cast: "林依晨、許瑋甯、賀軍翔", date: "2024-04-06", yearly: "9,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+不夠善良的我們+林依晨+許瑋甯+預告" },
+                { name: "我們與惡的距離 第二季", cast: "周渝民、薛仕凌、謝欣穎", date: "2026-04-05", yearly: "9,500 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+我們與惡的距離2+周渝民+薛仕凌+預告" },
+                { name: "華燈初上", cast: "林心如、楊謹華、楊祐寧", date: "2021-11-26", yearly: "7,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+華燈初上+林心如+楊謹華+預告" },
+                { name: "正港分局", cast: "許光漢、王淨", date: "2025-08-22", yearly: "6,200 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+正港分局+許光漢+王淨+預告" },
+                { name: "模仿犯", cast: "吳慷仁、柯佳嬿", date: "2023-03-31", yearly: "5,900 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+模仿犯+吳慷仁+柯佳嬿+預告" },
+                { name: "不良執念清除師", cast: "曾敬驊、彭千祐、宋芸樺", date: "2023-04-15", yearly: "4,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+不良執念清除師+曾敬驊+預告" },
+                { name: "人選之人-造浪者", cast: "謝盈萱、黃健瑋、王淨", date: "2023-04-28", yearly: "4,100 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+人選之人+謝盈萱+預告" },
+                { name: "誰是被害者 第二季", cast: "張孝全、許瑋甯", date: "2024-06-21", yearly: "3,900 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+誰是被害者2+張孝全+許瑋甯+預告" },
+                { name: "想見你", cast: "柯佳嬿、許光漢、施柏宇", date: "2019-11-17", yearly: "3,500 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+想見你+許光漢+柯佳嬿+預告" },
+                { name: "俗女養成記 2", cast: "謝盈萱、藍葦華", date: "2021-08-08", yearly: "3,200 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+俗女養成記2+謝盈萱+預告" }
+            ],
+            cnDrama: [
+                { name: "慶餘年 第二季", cast: "張若昀、李沁、陳道明", date: "2024-05-16", yearly: "24.5 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+慶餘年2+張若昀+李沁+預告" },
+                { name: "長相思", cast: "楊紫、張晚意、鄧為", date: "2023-07-24", yearly: "18.2 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+長相思+楊紫+張晚意+預告" },
+                { name: "與鳳行", cast: "趙麗穎、林更新", date: "2024-03-18", yearly: "15.6 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+與鳳行+趙麗穎+林更新+預告" },
+                { name: "狂飆", cast: "張譯、張頌文", date: "2023-01-14", yearly: "14.1 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+狂飆+張譯+張頌文+預告" },
+                { name: "繁花", cast: "胡歌、馬伊琍、唐嫣", date: "2023-12-27", yearly: "12.8 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+繁花+胡歌+馬伊琍+預告" },
+                { name: "玫瑰的故事", cast: "劉亦菲、佟大為、林更新", date: "2025-06-08", yearly: "11.2 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+玫瑰的故事+劉亦菲+預告" },
+                { name: "偷偷藏不住", cast: "趙露思、陳哲遠", date: "2023-06-20", yearly: "9.5 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+偷偷藏不住+趙露思+陳哲遠+預告" },
+                { name: "知否知否應是綠肥紅瘦", cast: "趙麗穎、馮紹峰", date: "2018-12-25", yearly: "8.9 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+知否+趙麗穎+馮紹峰+預告" },
+                { name: "蓮花樓", cast: "成毅、曾舜晞", date: "2023-07-23", yearly: "8.4 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+蓮花樓+成毅+曾舜晞+預告" },
+                { name: "蒼蘭訣", cast: "虞書欣、王鶴棣", date: "2022-08-07", yearly: "7.9 億次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+蒼蘭訣+虞書欣+王鶴棣+預告" }
+            ],
+            krDrama: [
+                { name: "淚之女王", cast: "金秀賢、金智媛", date: "2024-03-09", yearly: "16.8 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+淚之女王+金秀賢+金智媛+預告" },
+                { name: "黑暗榮耀", cast: "宋慧喬、李到晛、林智妍", date: "2022-12-30", yearly: "14.2 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+黑暗榮耀+宋慧喬+預告" },
+                { name: "Moving 異能", cast: "柳承龍、韓孝周、趙寅成", date: "2023-08-09", yearly: "12.5 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+Moving+異能+柳承龍+韓孝周+預告" },
+                { name: "背著善宰跑", cast: "邊佑錫、金惠奫", date: "2024-04-08", yearly: "9.4 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+背著善宰跑+邊佑錫+金惠奫+預告" },
+                { name: "魷魚遊戲 第二季", cast: "李政宰、李秉憲、孔劉", date: "2025-12-26", yearly: "8.8 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+魷魚遊戲2+李政宰+預告" },
+                { name: "非常律師禹英禑", cast: "朴恩斌、姜泰伍", date: "2022-06-29", yearly: "7.6 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+非常律師禹英禑+朴恩斌+預告" },
+                { name: "與惡魔有約", cast: "金裕貞、宋江", date: "2023-11-24", yearly: "6.2 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+與惡魔有約+宋江+金裕貞+預告" },
+                { name: "機智醫生生活", cast: "曹政奭、柳演錫、鄭敬淏", date: "2020-03-12", yearly: "5.5 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+機智醫生生活+曹政奭+預告" },
+                { name: "愛的迫降", cast: "玄彬、孫藝真", date: "2019-12-14", yearly: "5.2 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+愛的迫降+玄彬+孫藝真+預告" },
+                { name: "梨泰院Class", cast: "朴敘俊、金多美", date: "2020-01-31", yearly: "4.9 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+梨泰院Class+朴敘俊+預告" }
+            ],
+            twNew: [
+                { name: "昨日之約", cast: "劉冠廷、王淨、林柏宏", date: "2026-06-15", estimate: "1,650 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+昨日之約+劉冠廷+王淨+預告" },
+                { name: "霓虹夜行", cast: "范少勳、郭雪芙", date: "2026-06-20", estimate: "520 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+霓虹夜行+范少勳+郭雪芙+預告" },
+                { name: "時光的灰燼", cast: "許光漢、袁艾菲", date: "2026-05-20", estimate: "1,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+時光的灰燼+許光漢+預告" },
+                { name: "重播人生", cast: "傅孟柏、邵雨薇", date: "2026-05-02", estimate: "630 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+重播人生+傅孟柏+邵雨薇+預告" },
+                { name: "黎明前的倒數", cast: "陳昊森、李沐", date: "2026-04-12", estimate: "980 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+黎明前的倒數+陳昊森+李沐+預告" },
+                { name: "我們與惡的距離 第二季", cast: "周渝民、薛仕凌、謝欣穎", date: "2026-04-05", estimate: "9,500 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+我們與惡的距離2+周渝民+薛仕凌+預告" },
+                { name: "綠洲咖啡館", cast: "曾敬驊、項婕如", date: "2026-03-22", estimate: "1,240 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+綠洲咖啡館+曾敬驊+預告" },
+                { name: "風中的承諾", cast: "朱軒洋、蔡淑臻", date: "2026-03-05", estimate: "710 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+風中的承諾+朱軒洋+蔡淑臻+預告" },
+                { name: "破浪之時", cast: "吳慷仁、柯佳嬿", date: "2026-02-14", estimate: "1,420 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+破浪之時+吳慷仁+柯佳嬿+預告" },
+                { name: "記憶的邊緣", cast: "張孝全、賈靜雯", date: "2026-01-10", estimate: "850 萬次", videoUrl: "https://www.youtube.com/results?search_query=台劇+記憶的邊緣+張孝全+賈靜雯+預告" }
+            ],
+            cnNew: [
+                { name: "深淵對決", cast: "張若昀、鍾楚曦", date: "2026-06-10", estimate: "6,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+深淵對決+張若昀+鍾楚曦+預告" },
+                { name: "雲端之下", cast: "檀健次、周也", date: "2026-06-12", estimate: "1,600 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+雲端之下+檀健次+周也+預告" },
+                { name: "幻鏡城", cast: "任嘉倫、白鹿", date: "2026-05-28", estimate: "3,350 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+幻鏡城+任嘉倫+白鹿+預告" },
+                { name: "長風破浪", cast: "王一博、李沁、王陽", date: "2026-05-01", estimate: "9,200 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+長風破浪+王一博+李沁+預告" },
+                { name: "長夜之光", cast: "白宇、倪妮", date: "2026-04-18", estimate: "4,100 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+長夜之光+白宇+倪妮+預告" },
+                { name: "金陵往事", cast: "成毅、李一桐", date: "2026-04-01", estimate: "2,450 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+金陵往事+成毅+李一桐+預告" },
+                { name: "天亮說再見", cast: "陳星旭、章若楠", date: "2026-03-15", estimate: "4,900 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+天亮說再見+陳星旭+章若楠+預告" },
+                { name: "大漠孤煙", cast: "吳磊、迪麗熱巴", date: "2026-02-10", estimate: "2,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+大漠孤煙+吳磊+迪麗熱巴+預告" },
+                { name: "春風引", cast: "肖戰、趙露思", date: "2026-01-20", estimate: "5,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+春風引+肖戰+趙露思+預告" },
+                { name: "星河長明", cast: "許凱、虞書欣", date: "2026-01-05", estimate: "1,900 萬次", videoUrl: "https://www.youtube.com/results?search_query=陸劇+星河長明+許凱+虞書欣+預告" }
+            ],
+            krNew: [
+                { name: "神之天秤", cast: "金秀賢、金智媛", date: "2026-06-01", estimate: "5,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+神之天秤+金秀賢+金智媛+預告" },
+                { name: "第七次告白", cast: "邊佑錫、金惠奫", date: "2026-06-05", estimate: "920 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+第七次告白+邊佑錫+金惠奫+預告" },
+                { name: "全知讀者視角", cast: "李敏鎬、安孝燮、蔡秀彬", date: "2026-05-12", estimate: "1.4 億次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+全知讀者視角+李敏鎬+安孝燮+預告" },
+                { name: "藍色迴廊", cast: "玄彬、孫藝真", date: "2026-05-05", estimate: "1,620 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+藍色迴廊+玄彬+孫藝真+預告" },
+                { name: "黑色信號", cast: "李帝勳、具教煥", date: "2026-04-02", estimate: "2,400 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+黑色信號+李帝勳+具教煥+預告" },
+                { name: "冰點之下的你", cast: "宋江、金裕貞", date: "2026-04-25", estimate: "1,050 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+冰點之下的你+宋江+金裕貞+預告" },
+                { name: "機智的校園生活", cast: "高允貞、申詩雅", date: "2026-03-18", estimate: "1,450 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+機智的校園生活+高允貞+預告" },
+                { name: "明日預告", cast: "車銀優、韓韶禧", date: "2026-02-28", estimate: "2,800 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+明日預告+車銀優+韓韶禧+預告" },
+                { name: "影子獵人", cast: "李到晛、林智妍", date: "2026-02-11", estimate: "1,200 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+影子獵人+李到晛+林智妍+預告" },
+                { name: "首爾極夜", cast: "朴敘俊、韓孝周", date: "2026-01-15", estimate: "1,950 萬次", videoUrl: "https://www.youtube.com/results?search_query=韓劇+首爾極夜+朴敘俊+韓孝周+預告" }
+            ]
+        };
+
+        function changeTab(event, panelId) {
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(panelId).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function renderData() {
+            const now = new Date();
+            document.getElementById('sync-time').innerText = now.toLocaleString('zh-TW');
+
+            const generateRowHTML = (item, index, heatColor = '#6366f1') => `
+                <tr>
+                    <td><span class="rank-badge">${index + 1}</span></td>
+                    <td>
+                        <a href="${item.videoUrl}" target="_blank" class="drama-link">${item.name}</a>
+                        <div class="cast-info"><i class="fas fa-users"></i> 主演：${item.cast}</div>
+                        <div class="meta-row">
+                            <span class="date-text"><i class="far fa-calendar-alt"></i> ${item.date}</span>
+                            <span class="heat-text" style="color: ${heatColor};">${item.yearly}</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            const generateNewRowHTML = (item) => `
+                <tr>
+                    <td><span class="new-drama-badge">NEW</span></td>
+                    <td>
+                        <a href="${item.videoUrl}" target="_blank" class="drama-link" style="color:#67e8f9;">${item.name}</a>
+                        <div class="cast-info"><i class="fas fa-users"></i> 主演：${item.cast}</div>
+                        <div class="meta-row">
+                            <span class="date-text"><i class="far fa-calendar-alt"></i> ${item.date}</span>
+                            <span class="heat-text" style="color: #22c55e;">${item.estimate}</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            document.getElementById('recent-drama-list').innerHTML = mockDatabase.recentDrama.map((item, index) => generateRowHTML(item, index, '#a855f7')).join('');
+            document.getElementById('tw-new-list').innerHTML = mockDatabase.twNew.map(item => generateNewRowHTML(item)).join('');
+            document.getElementById('tw-2026-list').innerHTML = mockDatabase.twHot2026.map((item, index) => generateRowHTML(item, index, '#fdba74')).join('');
+            document.getElementById('tw-drama-list').innerHTML = mockDatabase.twDrama.map((item, index) => generateRowHTML(item, index, '#38bdf8')).join('');
+            document.getElementById('cn-new-list').innerHTML = mockDatabase.cnNew.map(item => generateNewRowHTML(item)).join('');
+            document.getElementById('cn-2026-list').innerHTML = mockDatabase.cnHot2026.map((item, index) => generateRowHTML(item, index, '#fdba74')).join('');
+            document.getElementById('cn-drama-list').innerHTML = mockDatabase.cnDrama.map((item, index) => generateRowHTML(item, index, '#f87171')).join('');
+            document.getElementById('kr-new-list').innerHTML = mockDatabase.krNew.map(item => generateNewRowHTML(item)).join('');
+            document.getElementById('kr-2026-list').innerHTML = mockDatabase.krHot2026.map((item, index) => generateRowHTML(item, index, '#fdba74')).join('');
+            document.getElementById('kr-drama-list').innerHTML = mockDatabase.krDrama.map((item, index) => generateRowHTML(item, index, '#fbbf24')).join('');
+        }
+
+        const refreshBtn = document.getElementById('refresh-btn');
+        const refreshIcon = document.getElementById('refresh-icon');
+        const dataContainer = document.getElementById('data-container');
+
+        refreshBtn.addEventListener('click', () => {
+            refreshIcon.classList.add('spinning');
+            dataContainer.classList.add('loading-shimmer');
+            refreshBtn.disabled = true;
+
+            setTimeout(() => {
+                renderData();
+                refreshIcon.classList.remove('spinning');
+                dataContainer.classList.remove('loading-shimmer');
+                refreshBtn.disabled = false;
+            }, 800);
+        });
+
+        window.onload = () => { renderData(); };
+    </script>
+</body>
+</html>
